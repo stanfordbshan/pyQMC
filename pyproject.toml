@@ -1,0 +1,52 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pyqmc"
+version = "0.1.0"
+description = "Educational Quantum Monte Carlo toolkit with optional pywebview GUI"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [
+  { name = "pyQMC contributors" }
+]
+keywords = ["quantum", "monte-carlo", "vmc", "dmc", "education"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Intended Audience :: Education",
+  "Topic :: Scientific/Engineering :: Physics"
+]
+dependencies = []
+
+[project.optional-dependencies]
+api = [
+  "fastapi>=0.110",
+  "uvicorn>=0.27"
+]
+gui = [
+  "pywebview>=5.0"
+]
+dev = [
+  "pytest>=8.0"
+]
+
+[project.scripts]
+pyqmc = "pyqmc.cli:main"
+pyqmc-api = "pyqmc.api.api_server:main"
+pyqmc-gui = "pyqmc.gui.app:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"pyqmc.gui" = ["assets/*.html", "assets/*.css", "assets/*.js"]
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+addopts = "-ra"
+testpaths = ["tests"]

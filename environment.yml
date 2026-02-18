@@ -1,0 +1,15 @@
+name: pyqmc
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - pip
+  - fastapi>=0.110
+  - uvicorn>=0.27
+  - pytest>=8.0
+  - pydantic>=2
+  - pip:
+      # GUI dependency is installed via pip for broad platform support.
+      - pywebview>=5.0
+      # Install this repo in editable mode with optional API/GUI/test extras.
+      - -e .[api,gui,dev]

@@ -1,0 +1,4 @@
+[console_scripts]
+pyqmc = pyqmc.cli:main
+pyqmc-api = pyqmc.api.api_server:main
+pyqmc-gui = pyqmc.gui.app:main

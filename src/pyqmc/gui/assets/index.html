@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>pyQMC Educational GUI</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <h1>pyQMC: VMC Playground</h1>
+      <p>
+        This interface runs an educational Variational Monte Carlo simulation for the
+        1D harmonic oscillator using the backend API.
+      </p>
+      <p class="api-status">API: <span id="api-url">(resolving...)</span></p>
+    </section>
+
+    <section class="panel">
+      <h2>Simulation Settings</h2>
+      <form id="vmc-form">
+        <div class="grid">
+          <label>N Steps
+            <input type="number" id="n_steps" value="20000" min="1" step="1" required />
+          </label>
+          <label>Burn In
+            <input type="number" id="burn_in" value="2000" min="0" step="1" required />
+          </label>
+          <label>Step Size
+            <input type="number" id="step_size" value="1.0" min="0.0001" step="0.1" required />
+          </label>
+          <label>Alpha
+            <input type="number" id="alpha" value="1.0" min="0.0001" step="0.05" required />
+          </label>
+          <label>Initial Position
+            <input type="number" id="initial_position" value="0.0" step="0.1" required />
+          </label>
+          <label>Seed
+            <input type="number" id="seed" value="12345" step="1" />
+          </label>
+        </div>
+        <div class="actions">
+          <button id="run-btn" type="submit">Run VMC</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="panel">
+      <h2>Result</h2>
+      <pre id="result" class="result">Run a simulation to see output.</pre>
+    </section>
+
+    <section class="panel compact">
+      <h2>Educational Notes</h2>
+      <ul>
+        <li>Exact ground-state energy in these units is <strong>0.5</strong>.</li>
+        <li>For this trial wavefunction family, <strong>alpha ≈ 1</strong> is optimal.</li>
+        <li>
+          If acceptance ratio is very low, try reducing step size. If it is very high,
+          you may increase step size for better exploration.
+        </li>
+      </ul>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
