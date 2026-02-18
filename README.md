@@ -5,7 +5,8 @@ Educational Quantum Monte Carlo examples with a backend-first design and an opti
 Current status:
 - Phase 1: backend project scaffold + VMC for 1D harmonic oscillator (CLI)
 - Phase 2: FastAPI backend service + pywebview GUI shell with separated assets
-- Future phases: tests, benchmark suite, full manuals
+- Phase 3: pytest unit and integration test suite
+- Phase 4: benchmark suite + user/developer manual expansion
 
 ## Quick start
 
@@ -24,4 +25,9 @@ pyqmc gui
 Run tests:
 ```bash
 pytest
+```
+
+Run numerical benchmark suite:
+```bash
+pyqmc benchmark --strict
 ```

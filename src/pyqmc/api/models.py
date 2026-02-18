@@ -54,3 +54,50 @@ class SystemInfo(BaseModel):
     name: str
     dimension: str
     notes: str
+
+
+class VmcHarmonicOscillatorBenchmarkRequest(BaseModel):
+    """Input payload for benchmark suite execution."""
+
+    n_steps: int = Field(default=30_000, gt=0)
+    burn_in: int = Field(default=3_000, ge=0)
+    step_size: float = Field(default=1.0, gt=0)
+    initial_position: float = 0.0
+    seed: int | None = 12345
+
+    @model_validator(mode="after")
+    def validate_burn_in(self) -> "VmcHarmonicOscillatorBenchmarkRequest":
+        """Ensure burn-in is smaller than total steps."""
+        if self.burn_in >= self.n_steps:
+            raise ValueError("burn_in must be smaller than n_steps")
+        return self
+
+
+class BenchmarkCaseResponse(BaseModel):
+    """One benchmark case result returned by API."""
+
+    case_id: str
+    description: str
+    alpha: float
+    reference_energy: float
+    measured_energy: float
+    standard_error: float
+    abs_error: float
+    tolerance: float
+    passed: bool
+    acceptance_ratio: float
+    n_samples: int
+    reference_source: str
+
+
+class BenchmarkSuiteResponse(BaseModel):
+    """Benchmark suite response payload."""
+
+    suite_name: str
+    method: str
+    system: str
+    total_cases: int
+    passed_cases: int
+    failed_cases: int
+    all_passed: bool
+    cases: list[BenchmarkCaseResponse]

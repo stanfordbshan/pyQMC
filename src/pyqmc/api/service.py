@@ -6,11 +6,20 @@ modules in `pyqmc.core` and method-specific packages.
 
 from __future__ import annotations
 
+from pyqmc.benchmarks.vmc_harmonic_oscillator import (
+    BenchmarkSuiteResult,
+    run_vmc_harmonic_oscillator_benchmarks,
+)
 from pyqmc.core.config import SimulationConfig
 from pyqmc.core.results import SimulationResult
 from pyqmc.vmc.solver import run_vmc_harmonic_oscillator as run_vmc_ho_solver
 
-from .models import MethodInfo, SystemInfo, VmcHarmonicOscillatorRequest
+from .models import (
+    MethodInfo,
+    SystemInfo,
+    VmcHarmonicOscillatorBenchmarkRequest,
+    VmcHarmonicOscillatorRequest,
+)
 
 
 def list_methods() -> list[MethodInfo]:
@@ -51,3 +60,16 @@ def run_vmc_harmonic_oscillator(
     )
 
     return run_vmc_ho_solver(config)
+
+
+def run_vmc_harmonic_oscillator_benchmark_suite(
+    request: VmcHarmonicOscillatorBenchmarkRequest,
+) -> BenchmarkSuiteResult:
+    """Execute benchmark suite for harmonic-oscillator VMC backend."""
+    return run_vmc_harmonic_oscillator_benchmarks(
+        n_steps=request.n_steps,
+        burn_in=request.burn_in,
+        step_size=request.step_size,
+        initial_position=request.initial_position,
+        seed=request.seed,
+    )

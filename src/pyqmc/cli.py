@@ -6,6 +6,9 @@ import argparse
 import json
 import sys
 
+from pyqmc.benchmarks.vmc_harmonic_oscillator import (
+    run_vmc_harmonic_oscillator_benchmarks,
+)
 from pyqmc.core.config import SimulationConfig
 from pyqmc.vmc.solver import run_vmc_harmonic_oscillator
 
@@ -63,6 +66,26 @@ def build_parser() -> argparse.ArgumentParser:
     gui.add_argument("--height", type=int, default=820)
     gui.add_argument("--debug", action="store_true")
 
+    benchmark = subparsers.add_parser(
+        "benchmark",
+        help="Run numerical benchmark suite against analytic/literature references",
+    )
+    benchmark.add_argument("--n-steps", type=int, default=30_000)
+    benchmark.add_argument("--burn-in", type=int, default=3_000)
+    benchmark.add_argument("--step-size", type=float, default=1.0)
+    benchmark.add_argument("--initial-position", type=float, default=0.0)
+    benchmark.add_argument("--seed", type=int, default=12345)
+    benchmark.add_argument(
+        "--json",
+        action="store_true",
+        help="Emit machine-readable JSON summary",
+    )
+    benchmark.add_argument(
+        "--strict",
+        action="store_true",
+        help="Return nonzero exit code when any benchmark case fails",
+    )
+
     return parser
 
 
@@ -119,6 +142,25 @@ def _run_gui(args: argparse.Namespace) -> int:
         return 2
 
 
+def _run_benchmark(args: argparse.Namespace) -> int:
+    suite = run_vmc_harmonic_oscillator_benchmarks(
+        n_steps=args.n_steps,
+        burn_in=args.burn_in,
+        step_size=args.step_size,
+        initial_position=args.initial_position,
+        seed=args.seed,
+    )
+
+    if args.json:
+        print(json.dumps(suite.to_dict(), indent=2))
+    else:
+        print(suite.to_pretty_text())
+
+    if args.strict and not suite.all_passed:
+        return 1
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     """CLI entry point."""
     parser = build_parser()
@@ -130,6 +172,8 @@ def main(argv: list[str] | None = None) -> int:
         return _run_serve_api(args)
     if args.command == "gui":
         return _run_gui(args)
+    if args.command == "benchmark":
+        return _run_benchmark(args)
 
     parser.error(f"unsupported command: {args.command}")
     return 2

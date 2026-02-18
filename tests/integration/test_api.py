@@ -70,3 +70,41 @@ def test_simulation_endpoint_validates_burnin() -> None:
 
     assert response.status_code == 422
     assert response.json()["detail"]
+
+
+def test_benchmark_endpoint_returns_expected_summary() -> None:
+    client = TestClient(create_app())
+
+    payload = {
+        "n_steps": 8000,
+        "burn_in": 1000,
+        "step_size": 1.0,
+        "initial_position": 0.0,
+        "seed": 7,
+    }
+
+    response = client.post("/benchmark/vmc/harmonic-oscillator", json=payload)
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["suite_name"] == "vmc_harmonic_oscillator_reference_suite"
+    assert data["total_cases"] == 3
+    assert data["all_passed"] is True
+    assert len(data["cases"]) == 3
+
+
+def test_benchmark_endpoint_validates_burnin() -> None:
+    client = TestClient(create_app())
+
+    payload = {
+        "n_steps": 500,
+        "burn_in": 500,
+        "step_size": 1.0,
+        "initial_position": 0.0,
+        "seed": 1,
+    }
+
+    response = client.post("/benchmark/vmc/harmonic-oscillator", json=payload)
+
+    assert response.status_code == 422
+    assert response.json()["detail"]

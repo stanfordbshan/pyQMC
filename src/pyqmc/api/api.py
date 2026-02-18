@@ -8,12 +8,19 @@ from fastapi.middleware.cors import CORSMiddleware
 from pyqmc import __version__
 
 from .models import (
+    BenchmarkSuiteResponse,
     MethodInfo,
     SimulationResultResponse,
     SystemInfo,
+    VmcHarmonicOscillatorBenchmarkRequest,
     VmcHarmonicOscillatorRequest,
 )
-from .service import list_methods, list_systems, run_vmc_harmonic_oscillator
+from .service import (
+    list_methods,
+    list_systems,
+    run_vmc_harmonic_oscillator,
+    run_vmc_harmonic_oscillator_benchmark_suite,
+)
 
 
 def create_app() -> FastAPI:
@@ -59,5 +66,16 @@ def create_app() -> FastAPI:
     ) -> SimulationResultResponse:
         result = run_vmc_harmonic_oscillator(payload)
         return SimulationResultResponse(**result.to_dict())
+
+    @app.post(
+        "/benchmark/vmc/harmonic-oscillator",
+        response_model=BenchmarkSuiteResponse,
+        tags=["benchmark"],
+    )
+    def benchmark_vmc_harmonic_oscillator(
+        payload: VmcHarmonicOscillatorBenchmarkRequest,
+    ) -> BenchmarkSuiteResponse:
+        suite = run_vmc_harmonic_oscillator_benchmark_suite(payload)
+        return BenchmarkSuiteResponse(**suite.to_dict())
 
     return app

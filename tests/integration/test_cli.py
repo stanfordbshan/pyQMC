@@ -78,3 +78,44 @@ def test_top_level_help_lists_supported_commands() -> None:
     assert "vmc-ho" in proc.stdout
     assert "serve-api" in proc.stdout
     assert "gui" in proc.stdout
+    assert "benchmark" in proc.stdout
+
+
+def test_benchmark_json_output_contains_case_summary() -> None:
+    proc = _run_pyqmc(
+        [
+            "benchmark",
+            "--n-steps",
+            "8000",
+            "--burn-in",
+            "1000",
+            "--seed",
+            "7",
+            "--json",
+        ]
+    )
+
+    assert proc.returncode == 0, proc.stderr
+    payload = json.loads(proc.stdout)
+
+    assert payload["suite_name"] == "vmc_harmonic_oscillator_reference_suite"
+    assert payload["total_cases"] == 3
+    assert payload["all_passed"] is True
+    assert len(payload["cases"]) == 3
+
+
+def test_benchmark_strict_returns_zero_when_all_cases_pass() -> None:
+    proc = _run_pyqmc(
+        [
+            "benchmark",
+            "--n-steps",
+            "8000",
+            "--burn-in",
+            "1000",
+            "--seed",
+            "7",
+            "--strict",
+        ]
+    )
+
+    assert proc.returncode == 0, proc.stderr

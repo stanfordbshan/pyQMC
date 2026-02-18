@@ -1,55 +1,98 @@
 # pyQMC Developer Manual
 
-## Design goals
-- Keep backend logic independent from GUI and transport concerns.
-- Prioritize readability and educational clarity over optimization.
+## Design Goals
+- Keep backend logic independent from GUI and transport layers.
+- Prioritize educational clarity over optimization.
+- Keep numerical behavior reproducible via explicit RNG seeds.
 
-## Package layout
-- `src/pyqmc/core`: shared backend config/result/stat utilities.
-- `src/pyqmc/vmc`: VMC-specific model, sampler, and solver.
-- `src/pyqmc/dmc`: reserved for future DMC module.
-- `src/pyqmc/api`: FastAPI layer exposing backend functionality.
-- `src/pyqmc/gui`: pywebview host process and frontend launcher.
-- `src/pyqmc/gui/assets`: static frontend assets.
+## Package Layout
+- `src/pyqmc/core`: shared backend utilities (config, stats, result models)
+- `src/pyqmc/vmc`: VMC method modules (model, sampler, solver)
+- `src/pyqmc/dmc`: placeholder for future DMC implementation
+- `src/pyqmc/benchmarks`: benchmark suite and reference formulas
+- `src/pyqmc/api`: FastAPI transport layer
+- `src/pyqmc/gui`: pywebview host and UI bootstrap
+- `src/pyqmc/gui/assets`: static frontend assets (HTML/CSS/JS)
 
-## Phase 1 implementation
-- `pyqmc.vmc.harmonic_oscillator.HarmonicOscillator1D` defines model equations.
-- `pyqmc.vmc.metropolis.sample_chain` performs random-walk Metropolis sampling.
-- `pyqmc.vmc.solver.run_vmc_harmonic_oscillator` computes energy estimate and summary.
-- `pyqmc.cli` exposes `pyqmc vmc-ho` command.
+## Layer Responsibilities
+- `core` / `vmc` / `dmc`:
+  - no FastAPI imports
+  - no pywebview imports
+  - pure simulation and numerical logic
+- `api`:
+  - pydantic request/response models
+  - endpoint handlers that call backend services
+- `gui`:
+  - desktop window lifecycle
+  - startup of embedded API process (optional)
+  - browser-side UI talks to API endpoints
 
-## Phase 2 implementation
-- `pyqmc.api.api.create_app` builds the FastAPI application.
-- `pyqmc.api.service` maps API requests to backend simulation calls.
-- `pyqmc.api.models` defines request/response schemas.
-- `pyqmc.api.api_server` runs uvicorn and is reused by `pyqmc serve-api`.
-- `pyqmc.gui.app.launch_gui` starts pywebview and either:
-  - launches an embedded local API process, or
-  - connects to an external API URL.
-- `src/pyqmc/gui/assets/*` contains UI HTML/CSS/JS and no backend logic.
+## Command Entry Points
+Primary CLI command:
+- `pyqmc` (`src/pyqmc/cli.py`)
 
-## Separation of concerns
-- `core`, `vmc`, `dmc` must remain free of web framework and GUI dependencies.
-- `api` should only adapt transport (HTTP) to backend service calls.
-- `gui` should only manage rendering and API communication.
+Subcommands:
+- `pyqmc vmc-ho`
+- `pyqmc serve-api`
+- `pyqmc gui`
+- `pyqmc benchmark`
 
-## Testing (Phase 3)
-- Unit tests live in `tests/unit` and cover:
-  - config validation
-  - statistical helpers
-  - result serialization
-  - harmonic oscillator equations
-  - Metropolis sampler behavior
-  - VMC solver outputs
-- Integration tests live in `tests/integration` and cover:
-  - CLI invocation and JSON output
-  - API routes via in-process FastAPI `TestClient`
-- Run full suite:
+Dedicated wrappers:
+- `pyqmc-api` -> `src/pyqmc/api/api_server.py`
+- `pyqmc-gui` -> `src/pyqmc/gui/app.py`
+
+## Benchmark System (Phase 4)
+Modules:
+- `src/pyqmc/benchmarks/references.py`
+- `src/pyqmc/benchmarks/vmc_harmonic_oscillator.py`
+
+Behavior:
+- Runs reproducible VMC benchmark cases with fixed seeds.
+- Compares measured energy to reference energy.
+- Computes absolute error and pass/fail against tolerance.
+- Produces both human-readable and JSON summaries.
+
+Current cases:
+- exact check at `alpha = 1.0`
+- variational-reference checks at `alpha = 0.8` and `alpha = 1.2`
+
+Reference details are documented in:
+- `docs/benchmark_references.md`
+
+## API Endpoints
+Catalog/meta:
+- `GET /health`
+- `GET /methods`
+- `GET /systems`
+
+Simulation:
+- `POST /simulate/vmc/harmonic-oscillator`
+
+Benchmark:
+- `POST /benchmark/vmc/harmonic-oscillator`
+
+## Testing
+Test layout:
+- `tests/unit`: fast deterministic checks for formulas, stats, solver internals
+- `tests/integration`: CLI and API integration checks
+
+Run all tests:
 ```bash
 pytest
 ```
 
-## Coding conventions
-- Favor explicit function signatures and small modules.
-- Add docstrings to all public functions/classes.
-- Add comments only where logic is non-obvious.
+## Extension Guide
+To add a new physical system or method:
+1. Add model/wavefunction/sampler logic under `src/pyqmc/<method>` or `src/pyqmc/core`.
+2. Add a solver function returning `SimulationResult`.
+3. Add CLI command wiring in `src/pyqmc/cli.py`.
+4. Add API request/response models and route handlers in `src/pyqmc/api`.
+5. Add benchmark references and cases in `src/pyqmc/benchmarks`.
+6. Add unit + integration tests.
+7. Update user/developer manuals.
+
+## Coding Conventions
+- Prefer explicit types and small focused functions.
+- Add docstrings for public functions/classes.
+- Add concise comments only where logic is non-obvious.
+- Keep reproducibility controls (`seed`) visible at API and CLI boundaries.
