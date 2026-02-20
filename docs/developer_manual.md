@@ -117,6 +117,142 @@ pyQMC/
   - Deep domain guides can live near modules (for example API/GUI Chinese
     developer notes), making maintenance easier during refactors.
 
+## Detailed Architecture Design and Why It Matters
+This section describes the repository as an explicit layered architecture, not
+just a folder grouping. The key objective is to separate computational science
+logic from transport/presentation details while still supporting desktop and
+service workflows from one codebase.
+
+### 1. Layered file-tree design
+The structure under `src/pyqmc` is intentionally split by responsibility:
+
+- Domain and numerical core:
+  - `core/`: shared primitives, configuration objects, input mapping, stats,
+    and result containers.
+  - `vmc/`, `dmc/`: method-specific scientific implementations.
+- Application/use-case layer:
+  - `application/`: transport-agnostic orchestration. Coordinates domain
+    modules to deliver complete user-facing operations.
+- Adapter layers:
+  - `api/`: HTTP adapter (FastAPI routes, request/response schemas, server
+    startup).
+  - `gui/`: desktop adapter (pywebview lifecycle, JavaScript bridge, embedded
+    API fallback bootstrap).
+- Cross-cutting validation:
+  - `core/vmc_input.py`: shared payload defaults and mapping logic used by
+    both API and GUI bridge to avoid drift.
+
+This file-tree design ensures each layer has one primary reason to change:
+- Domain methods change for physics/numerics.
+- Application changes for use-case orchestration.
+- Adapters change for protocol/UI/runtime concerns.
+
+### 2. Dependency direction rules
+The architecture follows strict inward dependency flow:
+
+- Allowed direction:
+  - `api` -> `application` -> (`core`, `vmc`, `dmc`, `benchmarks`)
+  - `gui` -> `application` -> (`core`, `vmc`, `dmc`, `benchmarks`)
+  - `cli` -> `application` -> (`core`, `vmc`, `dmc`, `benchmarks`)
+- Not allowed:
+  - `core` importing `api`/`gui`
+  - `vmc` importing FastAPI/pywebview
+  - `application` depending on HTTP request models or GUI window objects
+
+Practical effect:
+- Scientific code can run in tests, CLI, notebook, GUI direct mode, or remote
+  API mode without rewrite.
+- API schema evolution does not force edits to solver internals.
+- GUI layout changes do not risk numerical behavior regression.
+
+### 3. How frontend/backend separation is implemented
+Frontend and backend are separated at both code and runtime boundaries.
+
+Code-level separation:
+- Frontend UI assets:
+  - `gui/assets/index.html`
+  - `gui/assets/app.js`
+  - `gui/assets/styles.css`
+- Python backend computation:
+  - `core/`, `vmc/`, `dmc/`, `benchmarks/`
+- Bridging logic:
+  - `gui/app.py` exposes a narrow JS-callable bridge and forwards to
+    `application` use-cases.
+  - `api/api.py` exposes HTTP endpoints and forwards to the same use-cases.
+
+Runtime-level separation:
+- In direct mode, UI talks to local Python bridge (no HTTP required).
+- In API mode, UI talks to FastAPI endpoint(s) over HTTP.
+- In both paths, business orchestration is shared in `application/`.
+
+Because orchestration is shared, the same simulation request semantics and
+result schema are preserved across transports.
+
+### 4. Direct + API fallback mechanism (robustness + flexibility)
+`pyqmc gui` supports three compute modes:
+
+- `--compute-mode direct`
+  - Force local in-process computation through pywebview JS bridge.
+- `--compute-mode api`
+  - Force HTTP execution through API endpoint(s).
+- `--compute-mode auto` (default)
+  - Prefer direct local call.
+  - Fall back to API path when direct call is unavailable or fails.
+  - If no external API URL is provided, GUI can start an embedded local API
+    process and use it as fallback.
+
+Why this design is robust:
+- Reduces single points of failure:
+  - API startup/network issues do not block local educational usage if direct
+    compute works.
+  - Bridge limitations do not block usage if API is available.
+- Supports diverse deployment environments:
+  - Offline teaching/lab machine: direct mode.
+  - Shared compute service or remote host: API mode.
+  - Mixed/uncertain environment: auto fallback.
+
+Why this design is flexible:
+- Transport can be selected per scenario without changing scientific modules.
+- The same core computations can run on laptop CPU, remote server, or embedded
+  API process with minimal operational changes.
+- Future transports (for example batch worker, notebook service, websocket UI)
+  can reuse `application` use-cases instead of re-implementing orchestration.
+
+### 5. Why this architecture is a strong role model for other projects
+This design is a good reusable template because it provides:
+
+- Clear boundaries and maintainability:
+  - Fewer accidental couplings, easier refactoring.
+- Testability:
+  - Core and use-case layers can be unit-tested without UI/server stacks.
+  - Adapter contracts can be integration-tested independently.
+- Consistency:
+  - One orchestration layer prevents behavior divergence between GUI/API/CLI.
+- Evolvability:
+  - New methods and systems can be added as domain modules, then exposed
+    through existing adapters.
+- Operational resilience:
+  - Dual execution path (direct + API fallback) keeps workflows running under
+    varied runtime constraints.
+
+### 6. Practical extension pattern (recommended)
+When adding new functionality, keep this sequence:
+
+1. Add/extend domain solver code in method modules (`vmc/`, `dmc/`, etc.).
+2. Add a transport-agnostic use-case in `application/`.
+3. Reuse shared mapping/validation helpers in `core/` when possible.
+4. Expose the use-case in adapters:
+   - CLI command.
+   - API route/model.
+   - GUI bridge + frontend trigger.
+5. Add tests by layer:
+   - unit tests for domain/use-case logic.
+   - integration tests for adapter contracts.
+6. Update docs near each layer and in this manual.
+
+Following this pattern preserves frontend/backend separation while still keeping
+the whole project easy to teach, run, and evolve.
+
 ## Documentation Index
 - API 中文开发详解：
   - `src/pyqmc/api/API_DEVELOPER_GUIDE_ZH.md`
