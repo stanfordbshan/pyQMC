@@ -5,17 +5,25 @@ from __future__ import annotations
 from typing import Any
 
 from pydantic import BaseModel, Field, model_validator
+from pyqmc.core.vmc_input import (
+    DEFAULT_VMC_ALPHA,
+    DEFAULT_VMC_BURN_IN,
+    DEFAULT_VMC_INITIAL_POSITION,
+    DEFAULT_VMC_N_STEPS,
+    DEFAULT_VMC_SEED,
+    DEFAULT_VMC_STEP_SIZE,
+)
 
 
 class VmcHarmonicOscillatorRequest(BaseModel):
     """Input payload for VMC on the 1D harmonic oscillator."""
 
-    n_steps: int = Field(default=20_000, gt=0)
-    burn_in: int = Field(default=2_000, ge=0)
-    step_size: float = Field(default=1.0, gt=0)
-    alpha: float = Field(default=1.0, gt=0)
-    initial_position: float = 0.0
-    seed: int | None = 12345
+    n_steps: int = Field(default=DEFAULT_VMC_N_STEPS, gt=0)
+    burn_in: int = Field(default=DEFAULT_VMC_BURN_IN, ge=0)
+    step_size: float = Field(default=DEFAULT_VMC_STEP_SIZE, gt=0)
+    alpha: float = Field(default=DEFAULT_VMC_ALPHA, gt=0)
+    initial_position: float = DEFAULT_VMC_INITIAL_POSITION
+    seed: int | None = DEFAULT_VMC_SEED
 
     @model_validator(mode="after")
     def validate_burn_in(self) -> "VmcHarmonicOscillatorRequest":

@@ -7,12 +7,105 @@
 
 ## Package Layout
 - `src/pyqmc/core`: shared backend utilities (config, stats, result models)
+  - includes shared transport-agnostic input mapping (`core/vmc_input.py`)
 - `src/pyqmc/vmc`: VMC method modules (model, sampler, solver)
 - `src/pyqmc/dmc`: placeholder for future DMC implementation
 - `src/pyqmc/benchmarks`: benchmark suite and reference formulas
 - `src/pyqmc/api`: FastAPI transport layer
 - `src/pyqmc/gui`: pywebview host and UI bootstrap
 - `src/pyqmc/gui/assets`: static frontend assets (HTML/CSS/JS)
+
+## Repository File Tree
+The tree below focuses on source and docs. Generated/cache folders (for example
+`__pycache__`, `.pytest_cache`, `.git`) are omitted.
+
+```text
+pyQMC/
+├── README.md
+├── LICENSE
+├── pyproject.toml
+├── environment.yml
+├── docs/
+│   ├── user_manual.md
+│   ├── developer_manual.md
+│   └── benchmark_references.md
+├── src/
+│   └── pyqmc/
+│       ├── __init__.py
+│       ├── __main__.py
+│       ├── cli.py
+│       ├── core/
+│       │   ├── __init__.py
+│       │   ├── config.py
+│       │   ├── stats.py
+│       │   ├── results.py
+│       │   └── vmc_input.py
+│       ├── vmc/
+│       │   ├── __init__.py
+│       │   ├── harmonic_oscillator.py
+│       │   ├── metropolis.py
+│       │   └── solver.py
+│       ├── dmc/
+│       │   └── __init__.py
+│       ├── benchmarks/
+│       │   ├── __init__.py
+│       │   ├── references.py
+│       │   └── vmc_harmonic_oscillator.py
+│       ├── api/
+│       │   ├── __init__.py
+│       │   ├── __main__.py
+│       │   ├── api.py
+│       │   ├── api_server.py
+│       │   ├── models.py
+│       │   ├── service.py
+│       │   └── API_DEVELOPER_GUIDE_ZH.md
+│       └── gui/
+│           ├── __init__.py
+│           ├── __main__.py
+│           ├── app.py
+│           ├── GUI_DEVELOPER_NOTE_ZH.md
+│           └── assets/
+│               ├── index.html
+│               ├── app.js
+│               └── styles.css
+└── tests/
+    ├── conftest.py
+    ├── unit/
+    │   ├── test_core_config.py
+    │   ├── test_core_stats.py
+    │   ├── test_core_results.py
+    │   ├── test_core_vmc_input.py
+    │   ├── test_vmc_harmonic_oscillator.py
+    │   ├── test_vmc_metropolis.py
+    │   ├── test_vmc_solver.py
+    │   ├── test_gui_local_compute_bridge.py
+    │   ├── test_benchmark_references.py
+    │   └── test_benchmark_vmc_harmonic_oscillator.py
+    └── integration/
+        ├── test_cli.py
+        └── test_api.py
+```
+
+## Structure Philosophy
+- Backend-first core:
+  - Numerical logic lives in `core`, `vmc`, `dmc`.
+  - Physics code does not import GUI/web framework code.
+- Transport separation:
+  - `api` is an adapter layer (HTTP, schemas, route wiring).
+  - `gui` is a presentation/orchestration layer (pywebview window + JS bridge).
+- Shared mapping to prevent drift:
+  - `core/vmc_input.py` centralizes payload defaults and mapping to
+    `SimulationConfig`, reused by API and GUI direct mode.
+- Method-oriented growth path:
+  - Add new QMC categories as top-level method packages (`vmc`, `dmc`, future
+    modules) instead of mixing all logic into one file tree.
+- Test pyramid by intent:
+  - `tests/unit` checks formulas/mapping/components.
+  - `tests/integration` checks user-visible contracts (CLI/API).
+- Documentation close to code:
+  - High-level manuals live in `docs/`.
+  - Deep domain guides can live near modules (for example API/GUI Chinese
+    developer notes), making maintenance easier during refactors.
 
 ## Documentation Index
 - API 中文开发详解：

@@ -7,6 +7,9 @@
 - `src/pyqmc/gui/assets/app.js`
 - `src/pyqmc/gui/app.py`
 
+共享映射模块（避免 API 与 GUI 漂移）：
+- `src/pyqmc/core/vmc_input.py`
+
 ---
 
 ## 1. 三个文件分别做什么

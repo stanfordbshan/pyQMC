@@ -4,6 +4,10 @@
 
 注意：当前 GUI 已支持“本地直算（不走 HTTP）”与“API 通道”两种模式。本文重点解释 API 目录本身，同时说明它与 GUI 直算模式如何协同。
 
+另外，VMC 参数解析与 `SimulationConfig` 映射已抽取到共享模块：
+- `src/pyqmc/core/vmc_input.py`
+这样 API 与 GUI 复用同一套规则，避免字段语义漂移。
+
 ## 1. 目录结构与职责总览
 
 `src/pyqmc/api` 当前核心文件：
@@ -131,7 +135,7 @@
 
 职责边界：
 - **应该做**：
-  - 将 API Request 模型映射为后端 `SimulationConfig` 等对象。
+  - 将 API Request 模型映射为后端配置对象（当前通过 `core/vmc_input.py` 共享函数）。
   - 调用 `pyqmc.core / pyqmc.vmc / pyqmc.benchmarks`。
 - **不应该做**：
   - HTTP 细节（状态码、路由标签）。

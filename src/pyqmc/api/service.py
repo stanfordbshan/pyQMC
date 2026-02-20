@@ -10,7 +10,7 @@ from pyqmc.benchmarks.vmc_harmonic_oscillator import (
     BenchmarkSuiteResult,
     run_vmc_harmonic_oscillator_benchmarks,
 )
-from pyqmc.core.config import SimulationConfig
+from pyqmc.core.vmc_input import build_vmc_harmonic_oscillator_config
 from pyqmc.core.results import SimulationResult
 from pyqmc.vmc.solver import run_vmc_harmonic_oscillator as run_vmc_ho_solver
 
@@ -50,7 +50,7 @@ def run_vmc_harmonic_oscillator(
     request: VmcHarmonicOscillatorRequest,
 ) -> SimulationResult:
     """Execute the backend VMC solver for the requested configuration."""
-    config = SimulationConfig(
+    config = build_vmc_harmonic_oscillator_config(
         n_steps=request.n_steps,
         burn_in=request.burn_in,
         step_size=request.step_size,

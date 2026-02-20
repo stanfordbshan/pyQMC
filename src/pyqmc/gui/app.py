@@ -12,7 +12,7 @@ from typing import Any, Literal
 from urllib.parse import urlencode
 from urllib.request import urlopen
 
-from pyqmc.core.config import SimulationConfig
+from pyqmc.core.vmc_input import build_vmc_harmonic_oscillator_config_from_mapping
 from pyqmc.vmc.solver import run_vmc_harmonic_oscillator
 
 ComputeMode = Literal["auto", "direct", "api"]
@@ -32,56 +32,10 @@ class LocalComputeBridge:
 
     def run_vmc_harmonic_oscillator(self, payload: dict[str, Any]) -> dict[str, Any]:
         """Run VMC locally without HTTP and return JSON-serializable result."""
-        config = _build_vmc_config_from_payload(payload)
+        # Reuse shared payload->config mapping so GUI and API stay in sync.
+        config = build_vmc_harmonic_oscillator_config_from_mapping(payload)
         result = run_vmc_harmonic_oscillator(config)
         return result.to_dict()
-
-
-def _build_vmc_config_from_payload(payload: dict[str, Any]) -> SimulationConfig:
-    """Parse and validate GUI payload into `SimulationConfig`."""
-    if not isinstance(payload, dict):
-        raise ValueError("payload must be a JSON object")
-
-    n_steps = _parse_int(payload.get("n_steps", 20_000), "n_steps")
-    burn_in = _parse_int(payload.get("burn_in", 2_000), "burn_in")
-    step_size = _parse_float(payload.get("step_size", 1.0), "step_size")
-    alpha = _parse_float(payload.get("alpha", 1.0), "alpha")
-    initial_position = _parse_float(
-        payload.get("initial_position", 0.0),
-        "initial_position",
-    )
-
-    raw_seed = payload.get("seed", 12345)
-    seed: int | None
-    if raw_seed in (None, ""):
-        seed = None
-    else:
-        seed = _parse_int(raw_seed, "seed")
-
-    return SimulationConfig(
-        n_steps=n_steps,
-        burn_in=burn_in,
-        step_size=step_size,
-        alpha=alpha,
-        initial_position=initial_position,
-        seed=seed,
-    )
-
-
-def _parse_int(value: Any, field_name: str) -> int:
-    """Parse one integer field from GUI payload."""
-    try:
-        return int(value)
-    except (TypeError, ValueError) as exc:
-        raise ValueError(f"{field_name} must be an integer") from exc
-
-
-def _parse_float(value: Any, field_name: str) -> float:
-    """Parse one float field from GUI payload."""
-    try:
-        return float(value)
-    except (TypeError, ValueError) as exc:
-        raise ValueError(f"{field_name} must be a number") from exc
 
 
 def _wait_for_api_health(base_url: str, timeout_seconds: float = 15.0) -> None:
