@@ -85,12 +85,28 @@ Key endpoints:
 
 ## GUI Usage
 
-Launch GUI with embedded local API backend:
+The GUI now supports two computation transports:
+- direct local compute (no HTTP): calls Python backend directly via pywebview bridge
+- HTTP API compute: calls FastAPI endpoints (local or remote)
+
+Default mode is `auto`: try direct local compute first, then fall back to API.
+
+Launch GUI in default auto mode:
 ```bash
 pyqmc gui
 ```
 
-Launch GUI connected to an already-running API:
+Force direct local compute only (no HTTP):
+```bash
+pyqmc gui --compute-mode direct
+```
+
+Force API-only compute (embedded local API if `--api-url` is not provided):
+```bash
+pyqmc gui --compute-mode api
+```
+
+Launch GUI connected to an already-running local or remote API:
 ```bash
 pyqmc gui --api-url http://127.0.0.1:8000
 ```

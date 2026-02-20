@@ -30,8 +30,9 @@
   - endpoint handlers that call backend services
 - `gui`:
   - desktop window lifecycle
-  - startup of embedded API process (optional)
-  - browser-side UI talks to API endpoints
+  - local direct-compute bridge (`pywebview` JS -> Python)
+  - startup of embedded API process (optional fallback)
+  - browser-side UI can talk to API endpoints when needed
 
 ## Command Entry Points
 Primary CLI command:
@@ -42,6 +43,11 @@ Subcommands:
 - `pyqmc serve-api`
 - `pyqmc gui`
 - `pyqmc benchmark`
+
+GUI transport modes:
+- `pyqmc gui --compute-mode auto` (default): direct local compute first, API fallback second
+- `pyqmc gui --compute-mode direct`: direct local compute only
+- `pyqmc gui --compute-mode api`: API-only transport
 
 Dedicated wrappers:
 - `pyqmc-api` -> `src/pyqmc/api/api_server.py`

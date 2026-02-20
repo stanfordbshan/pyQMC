@@ -2,6 +2,8 @@
 
 本文档面向开发者，详细说明 `src/pyqmc/api` 目录下各 Python 文件的职责、调用链路，以及在新增功能或调整 GUI 时如何正确新增/修改 API。
 
+注意：当前 GUI 已支持“本地直算（不走 HTTP）”与“API 通道”两种模式。本文重点解释 API 目录本身，同时说明它与 GUI 直算模式如何协同。
+
 ## 1. 目录结构与职责总览
 
 `src/pyqmc/api` 当前核心文件：
@@ -139,18 +141,23 @@
 
 ## 3. 请求调用链（从 GUI 到后端）
 
-以 GUI 中“运行 VMC”为例：
+以 GUI 中“运行 VMC”为例，存在两条路径：
 
-1. `src/pyqmc/gui/assets/app.js`
-   - 组装 JSON payload。
-   - 调用 `POST /simulate/vmc/harmonic-oscillator`。
-2. `api.py` 路由接收请求，解析为 `VmcHarmonicOscillatorRequest`。
-3. `service.py` 将请求映射到 `SimulationConfig`。
-4. 调用 `pyqmc.vmc.solver.run_vmc_harmonic_oscillator(...)`。
-5. 返回 `SimulationResult`。
+A. 本地直算路径（不走 HTTP）：
+1. `src/pyqmc/gui/assets/app.js` 组装 payload。
+2. 通过 `window.pywebview.api` 调用 Python bridge。
+3. `src/pyqmc/gui/app.py` 中 bridge 直接调用 `pyqmc.vmc.solver`。
+4. 返回结果给前端渲染。
+
+B. API 路径（本地/远程 HTTP）：
+1. `src/pyqmc/gui/assets/app.js` 组装 payload。
+2. 调用 `POST /simulate/vmc/harmonic-oscillator`。
+3. `api.py` 路由接收请求，解析为 `VmcHarmonicOscillatorRequest`。
+4. `service.py` 将请求映射到 `SimulationConfig`。
+5. 调用 `pyqmc.vmc.solver.run_vmc_harmonic_oscillator(...)`。
 6. `api.py` 将结果转换为 `SimulationResultResponse` 返回 GUI。
 
-这个链路体现了“前端/UI 与计算核心解耦”。
+`--compute-mode auto` 下通常优先走 A，失败后回退到 B。
 
 ---
 
@@ -272,8 +279,12 @@ def simulate_dmc_hydrogen(payload: DmcHydrogenRequest) -> SimulationResultRespon
 
 - 修改 `src/pyqmc/gui/assets/app.js`：
   - 调整 payload 字段。
-  - 调整 fetch URL。
+  - 若使用 API，调整 fetch URL。
+  - 若支持直算，调整 pywebview bridge 调用名。
   - 调整结果渲染字段。
+- 修改 `src/pyqmc/gui/app.py`：
+  - 若启用本地直算，扩展 bridge 方法并映射到后端计算函数。
+  - 必要时调整 `--compute-mode` 的行为。
 - 若新增独立页面控件，同步更新 `index.html` 与 `styles.css`。
 
 ---
@@ -289,7 +300,8 @@ def simulate_dmc_hydrogen(payload: DmcHydrogenRequest) -> SimulationResultRespon
 2. `service.py`：把字段传给后端配置对象。
 3. 后端 solver/sampler：支持新参数。
 4. `app.js`：提交新字段。
-5. API/CLI 测试更新。
+5. 若 GUI 支持本地直算：`gui/app.py` bridge 也要解析并传递该字段。
+6. API/CLI 测试更新。
 
 注意：
 - 如果是破坏性变更（字段语义变化），建议新增 endpoint 或做兼容分支，不要直接让旧 GUI 失效。
@@ -313,6 +325,7 @@ def simulate_dmc_hydrogen(payload: DmcHydrogenRequest) -> SimulationResultRespon
 - 路径是否和前端 fetch 一致。
 - 请求字段名是否和前端 JSON 一致。
 - 响应字段名是否和前端渲染一致。
+- 若有本地直算：bridge 方法名、参数名、返回结构是否与前端一致。
 - `model_validator` 是否覆盖关键跨字段约束。
 - Swagger (`/docs`) 能否正确展示新模型。
 - 集成测试是否覆盖成功/失败路径。
@@ -375,4 +388,3 @@ A：当 GUI 或外部前端部署到特定域名时，建议把 `allow_origins=[
 ## Q3：新增功能时，最容易漏掉哪一步？
 
 A：最常见是“后端改了但模型没改”或“API 改了但 app.js 还在发旧字段”。建议每次按第 5 节步骤逐项执行。
-

@@ -22,6 +22,11 @@ pip install -e '.[api,gui]'
 pyqmc gui
 ```
 
+Run GUI with direct local compute only (no HTTP):
+```bash
+pyqmc gui --compute-mode direct
+```
+
 Run tests:
 ```bash
 pytest

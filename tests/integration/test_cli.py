@@ -119,3 +119,13 @@ def test_benchmark_strict_returns_zero_when_all_cases_pass() -> None:
     )
 
     assert proc.returncode == 0, proc.stderr
+
+
+def test_gui_help_lists_compute_mode_option() -> None:
+    proc = _run_pyqmc(["gui", "--help"])
+
+    assert proc.returncode == 0
+    assert "--compute-mode" in proc.stdout
+    assert "direct" in proc.stdout
+    assert "api" in proc.stdout
+    assert "auto" in proc.stdout

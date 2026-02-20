@@ -60,6 +60,15 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Use an existing API URL instead of starting an embedded backend",
     )
+    gui.add_argument(
+        "--compute-mode",
+        default="auto",
+        choices=("auto", "direct", "api"),
+        help=(
+            "Computation transport mode: 'direct' uses local bridge only, "
+            "'api' uses HTTP API only, 'auto' tries local first then API fallback"
+        ),
+    )
     gui.add_argument("--api-host", default="127.0.0.1")
     gui.add_argument("--api-port", type=int, default=8000)
     gui.add_argument("--width", type=int, default=1180)
@@ -131,6 +140,7 @@ def _run_gui(args: argparse.Namespace) -> int:
 
         return launch_gui(
             api_url=args.api_url,
+            compute_mode=args.compute_mode,
             api_host=args.api_host,
             api_port=args.api_port,
             width=args.width,
