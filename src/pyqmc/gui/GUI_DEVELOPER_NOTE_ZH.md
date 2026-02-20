@@ -10,6 +10,9 @@
 共享映射模块（避免 API 与 GUI 漂移）：
 - `src/pyqmc/core/vmc_input.py`
 
+共享用例层（避免把业务编排耦合到 API/GUI）：
+- `src/pyqmc/application/`
+
 ---
 
 ## 1. 三个文件分别做什么
@@ -73,7 +76,7 @@
 2. `app.js` 收集 payload。
 3. `app.js -> window.pywebview.api.run_vmc_harmonic_oscillator(payload)`。
 4. `app.py` 中 `LocalComputeBridge` 接收 payload。
-5. bridge 构造 `SimulationConfig` 并调用 `pyqmc.vmc.solver`。
+5. bridge 使用共享映射并调用 `application` 用例。
 6. 计算结果返回 JS，`app.js` 渲染到页面。
 
 特点：
@@ -85,6 +88,7 @@
 1. 用户在页面输入参数并提交。
 2. `app.js` 发送 `fetch POST /simulate/vmc/harmonic-oscillator`。
 3. FastAPI 路由处理请求并调用后端 solver。
+3. FastAPI 路由处理请求并调用 `application` 用例。
 4. JSON 响应返回前端，`app.js` 渲染结果。
 
 特点：
@@ -143,8 +147,8 @@ class LocalComputeBridge:
 
 在 `src/pyqmc/api` 同步新增：
 - `models.py`：请求/响应模型
-- `service.py`：业务编排
 - `api.py`：新 endpoint
+并在 `src/pyqmc/application` 增加/扩展对应用例。
 
 说明：
 - 如果该功能只用于本地直算，可暂不新增 API。

@@ -1,394 +1,171 @@
 # pyQMC API 开发说明（中文）
 
-本文档面向开发者，详细说明 `src/pyqmc/api` 目录下各 Python 文件的职责、调用链路，以及在新增功能或调整 GUI 时如何正确新增/修改 API。
+本文档面向开发者，说明 `src/pyqmc/api` 在当前架构中的职责，以及如何在新增功能时与 `application`、`core`、`gui` 协同。
 
-注意：当前 GUI 已支持“本地直算（不走 HTTP）”与“API 通道”两种模式。本文重点解释 API 目录本身，同时说明它与 GUI 直算模式如何协同。
+核心原则：
+- `api/` 是 HTTP 适配层，不承载业务编排逻辑。
+- 业务用例放在 `src/pyqmc/application/`。
+- 参数映射与默认值在共享模块 `src/pyqmc/core/vmc_input.py` 中统一。
 
-另外，VMC 参数解析与 `SimulationConfig` 映射已抽取到共享模块：
-- `src/pyqmc/core/vmc_input.py`
-这样 API 与 GUI 复用同一套规则，避免字段语义漂移。
+---
 
-## 1. 目录结构与职责总览
+## 1. API 目录结构
 
-`src/pyqmc/api` 当前核心文件：
-
+当前核心文件：
 - `__init__.py`
 - `__main__.py`
 - `api_server.py`
 - `api.py`
 - `models.py`
-- `service.py`
+- `API_DEVELOPER_GUIDE_ZH.md`
 
-推荐理解顺序：
-1. `api.py`（路由定义）
-2. `models.py`（请求/响应模型）
-3. `service.py`（业务编排层）
-4. `api_server.py`（服务启动）
-5. `__init__.py` / `__main__.py`（导入和入口适配）
+说明：
+- 旧的 `service.py` 已移除。
+- 业务编排职责已迁移到 `src/pyqmc/application/`。
+
+推荐阅读顺序：
+1. `api.py`（路由）
+2. `models.py`（请求/响应 schema）
+3. `api_server.py`（服务启动）
+4. `src/pyqmc/application/*`（实际用例）
 
 ---
 
-## 2. 文件级详细说明
+## 2. 文件级说明
 
 ## 2.1 `__init__.py`
 
-核心作用：
+职责：
 - 对外暴露 `create_app`。
-- **延迟导入** FastAPI 依赖，避免“仅导入包就触发 fastapi 缺失错误”。
-
-当前行为要点：
-- `__all__ = ["create_app"]`
-- `create_app()` 内部再 `from .api import create_app as _create_app`
-
-适用场景：
-- 当某些 CLI 功能不需要 API 依赖时，仍能安全导入 `pyqmc.api`。
-
----
+- 延迟导入 FastAPI，避免非 API 场景因依赖缺失报错。
 
 ## 2.2 `__main__.py`
 
-核心作用：
-- 支持命令 `python -m pyqmc.api`。
+职责：
+- 支持 `python -m pyqmc.api`。
 - 内部转发到 `api_server.main()`。
-
-这让 API 服务具备模块执行入口，便于调试和脚本化调用。
-
----
 
 ## 2.3 `api_server.py`
 
-核心作用：
-- API 进程入口（命令行参数解析 + uvicorn 启动）。
+职责：
+- API 进程入口。
+- 参数解析（host/port/reload/log-level）。
+- 启动 uvicorn 并做依赖检查。
 
-关键函数：
-- `build_parser()`：定义 `--host/--port/--log-level/--reload`。
-- `run_server(...)`：检查依赖，调用 `uvicorn.run(..., factory=True)`。
-- `main(argv)`：命令行入口，异常转换为可读错误消息并返回退出码。
+## 2.4 `models.py`
 
-设计意图：
-- 将“服务进程启动逻辑”与“路由定义逻辑”分离。
-- 在依赖缺失时给出明确安装提示：`pip install -e '.[api]'`。
-
----
-
-## 2.4 `api.py`
-
-核心作用：
-- FastAPI app factory。
-- 注册中间件和路由。
-
-关键点：
-- `create_app() -> FastAPI`
-- 配置 CORS（目前 `allow_origins=["*"]`，方便本地 GUI 和静态页面调试）。
-- 当前路由：
-  - `GET /health`
-  - `GET /methods`
-  - `GET /systems`
-  - `POST /simulate/vmc/harmonic-oscillator`
-  - `POST /benchmark/vmc/harmonic-oscillator`
-
-分层原则：
-- 路由函数应保持“薄”：
-  - 接收 `models.py` 中的请求模型。
-  - 调用 `service.py` 业务函数。
-  - 将结果转换为响应模型。
-
----
-
-## 2.5 `models.py`
-
-核心作用：
-- 定义 API 输入/输出契约（Pydantic 模型）。
-
-当前模型分两类：
-
-1. 请求模型（Request）
-- `VmcHarmonicOscillatorRequest`
-- `VmcHarmonicOscillatorBenchmarkRequest`
-
-2. 响应模型（Response）
-- `SimulationResultResponse`
-- `MethodInfo`
-- `SystemInfo`
-- `BenchmarkCaseResponse`
-- `BenchmarkSuiteResponse`
-
-建模要点：
-- 用 `Field(gt=..., ge=...)` 表达数值边界。
-- 用 `@model_validator(mode="after")` 执行跨字段验证（例如 `burn_in < n_steps`）。
-
-收益：
-- 错误输入会自动返回 HTTP 422，减少业务层防御代码。
-
----
-
-## 2.6 `service.py`
-
-核心作用：
-- API 层与后端计算层的“编排适配层”。
-
-当前函数：
-- `list_methods()`
-- `list_systems()`
-- `run_vmc_harmonic_oscillator(request)`
-- `run_vmc_harmonic_oscillator_benchmark_suite(request)`
-
-职责边界：
-- **应该做**：
-  - 将 API Request 模型映射为后端配置对象（当前通过 `core/vmc_input.py` 共享函数）。
-  - 调用 `pyqmc.core / pyqmc.vmc / pyqmc.benchmarks`。
-- **不应该做**：
-  - HTTP 细节（状态码、路由标签）。
-  - GUI 逻辑。
-
----
-
-## 3. 请求调用链（从 GUI 到后端）
-
-以 GUI 中“运行 VMC”为例，存在两条路径：
-
-A. 本地直算路径（不走 HTTP）：
-1. `src/pyqmc/gui/assets/app.js` 组装 payload。
-2. 通过 `window.pywebview.api` 调用 Python bridge。
-3. `src/pyqmc/gui/app.py` 中 bridge 直接调用 `pyqmc.vmc.solver`。
-4. 返回结果给前端渲染。
-
-B. API 路径（本地/远程 HTTP）：
-1. `src/pyqmc/gui/assets/app.js` 组装 payload。
-2. 调用 `POST /simulate/vmc/harmonic-oscillator`。
-3. `api.py` 路由接收请求，解析为 `VmcHarmonicOscillatorRequest`。
-4. `service.py` 将请求映射到 `SimulationConfig`。
-5. 调用 `pyqmc.vmc.solver.run_vmc_harmonic_oscillator(...)`。
-6. `api.py` 将结果转换为 `SimulationResultResponse` 返回 GUI。
-
-`--compute-mode auto` 下通常优先走 A，失败后回退到 B。
-
----
-
-## 4. 现有 API 使用示例
-
-## 4.1 健康检查
-
-```bash
-curl -s http://127.0.0.1:8000/health
-```
-
-返回示例：
-
-```json
-{"status":"ok"}
-```
-
-## 4.2 运行 VMC 模拟
-
-```bash
-curl -s -X POST http://127.0.0.1:8000/simulate/vmc/harmonic-oscillator \
-  -H "Content-Type: application/json" \
-  -d '{
-    "n_steps": 12000,
-    "burn_in": 2000,
-    "step_size": 1.0,
-    "alpha": 0.95,
-    "initial_position": 0.0,
-    "seed": 7
-  }'
-```
-
-## 4.3 运行基准测试
-
-```bash
-curl -s -X POST http://127.0.0.1:8000/benchmark/vmc/harmonic-oscillator \
-  -H "Content-Type: application/json" \
-  -d '{
-    "n_steps": 12000,
-    "burn_in": 2000,
-    "step_size": 1.0,
-    "initial_position": 0.0,
-    "seed": 7
-  }'
-```
-
----
-
-## 5. 新增 API 功能的标准步骤（强烈推荐）
-
-假设要新增一个能力：`DMC Hydrogen`。
-
-## Step 1：先实现后端计算能力（非 API 层）
-
-在 `pyqmc.dmc` 中提供稳定函数，例如：
-- `run_dmc_hydrogen(config) -> SimulationResult`
-
-原则：
-- 后端先跑通（CLI 或单测先验证）。
-
-## Step 2：在 `models.py` 增加请求/响应模型
-
-示例（节选）：
-
-```python
-class DmcHydrogenRequest(BaseModel):
-    n_steps: int = Field(default=20000, gt=0)
-    burn_in: int = Field(default=2000, ge=0)
-    time_step: float = Field(default=0.01, gt=0)
-    seed: int | None = 12345
-
-    @model_validator(mode="after")
-    def validate_burn_in(self) -> "DmcHydrogenRequest":
-        if self.burn_in >= self.n_steps:
-            raise ValueError("burn_in must be smaller than n_steps")
-        return self
-```
-
-## Step 3：在 `service.py` 增加编排函数
-
-示例（节选）：
-
-```python
-def run_dmc_hydrogen_service(request: DmcHydrogenRequest) -> SimulationResult:
-    config = DmcConfig(
-        n_steps=request.n_steps,
-        burn_in=request.burn_in,
-        time_step=request.time_step,
-        seed=request.seed,
-    )
-    return run_dmc_hydrogen(config)
-```
-
-## Step 4：在 `api.py` 注册路由
-
-示例（节选）：
-
-```python
-@app.post(
-    "/simulate/dmc/hydrogen",
-    response_model=SimulationResultResponse,
-    tags=["simulate"],
-)
-def simulate_dmc_hydrogen(payload: DmcHydrogenRequest) -> SimulationResultResponse:
-    result = run_dmc_hydrogen_service(payload)
-    return SimulationResultResponse(**result.to_dict())
-```
-
-## Step 5：补齐测试
-
-至少包含：
-- `tests/integration/test_api.py`：
-  - 正常输入返回 200。
-  - 非法输入返回 422。
-- `tests/integration/test_cli.py`（如果 CLI 也暴露该能力）。
-- 相关单元测试（后端数值和配置验证）。
-
-## Step 6：更新 GUI（如果前端需要）
-
-- 修改 `src/pyqmc/gui/assets/app.js`：
-  - 调整 payload 字段。
-  - 若使用 API，调整 fetch URL。
-  - 若支持直算，调整 pywebview bridge 调用名。
-  - 调整结果渲染字段。
-- 修改 `src/pyqmc/gui/app.py`：
-  - 若启用本地直算，扩展 bridge 方法并映射到后端计算函数。
-  - 必要时调整 `--compute-mode` 的行为。
-- 若新增独立页面控件，同步更新 `index.html` 与 `styles.css`。
-
----
-
-## 6. 修改已有 API 的实战指南
-
-## 场景 A：新增一个请求参数
-
-例：给 VMC 模拟新增 `proposal_mode`。
-
-改动顺序：
-1. `models.py`：给 `VmcHarmonicOscillatorRequest` 加字段与枚举/校验。
-2. `service.py`：把字段传给后端配置对象。
-3. 后端 solver/sampler：支持新参数。
-4. `app.js`：提交新字段。
-5. 若 GUI 支持本地直算：`gui/app.py` bridge 也要解析并传递该字段。
-6. API/CLI 测试更新。
+职责：
+- 定义 API 输入/输出契约（Pydantic）。
+- 负责输入边界与跨字段校验（例如 `burn_in < n_steps`）。
 
 注意：
-- 如果是破坏性变更（字段语义变化），建议新增 endpoint 或做兼容分支，不要直接让旧 GUI 失效。
+- `VMC` 的默认参数来自 `core/vmc_input.py`，避免 API 与 GUI 默认值漂移。
 
-## 场景 B：响应结构变化
+## 2.5 `api.py`
 
-例：新增 `autocorrelation_time`。
+职责：
+- 创建 FastAPI app。
+- 配置中间件（CORS）。
+- 注册路由并把请求转发给 `application` 用例。
 
-改动顺序：
-1. 后端结果对象产出该值。
-2. `SimulationResultResponse` 增加字段。
-3. 路由返回自动包含新字段。
-4. GUI 渲染逻辑增加显示（旧字段不删除，优先增量兼容）。
-
----
-
-## 7. API 与 GUI 协同开发检查清单
-
-每次改 API 前后，请检查：
-
-- 路径是否和前端 fetch 一致。
-- 请求字段名是否和前端 JSON 一致。
-- 响应字段名是否和前端渲染一致。
-- 若有本地直算：bridge 方法名、参数名、返回结构是否与前端一致。
-- `model_validator` 是否覆盖关键跨字段约束。
-- Swagger (`/docs`) 能否正确展示新模型。
-- 集成测试是否覆盖成功/失败路径。
+分层要求：
+- 路由函数保持薄：
+  - 接收 `models.py` 请求模型。
+  - 调用 `application` 用例（非 `core` 细节拼装）。
+  - 将结果封装为响应模型。
 
 ---
 
-## 8. 调试与运行命令
+## 3. 与 application 层的关系
+
+`application` 是 transport-agnostic 用例层，API 只做协议适配。
+
+当前 API 对应关系：
+- `GET /methods` -> `application.catalog.get_available_methods()`
+- `GET /systems` -> `application.catalog.get_available_systems()`
+- `POST /simulate/vmc/harmonic-oscillator` -> `application.vmc.run_vmc_harmonic_oscillator_use_case(...)`
+- `POST /benchmark/vmc/harmonic-oscillator` -> `application.vmc.run_vmc_harmonic_oscillator_benchmark_use_case(...)`
+
+收益：
+- CLI / GUI direct / API 共用同一业务用例，行为一致。
+- API 目录保持干净，不与计算实现耦合。
+
+---
+
+## 4. 调用链（GUI 与 API 并存）
+
+A. GUI 直算路径：
+1. `gui/assets/app.js` 组装 payload。
+2. 调 `window.pywebview.api`。
+3. `gui/app.py` bridge 调 `application` 用例。
+4. 返回结果渲染。
+
+B. API 路径：
+1. 前端 `fetch` 请求 API。
+2. `api.py` 路由收参（Pydantic）。
+3. 路由调用 `application` 用例。
+4. 返回响应模型 JSON。
+
+`--compute-mode auto` 下一般先走 A，失败后回退 B。
+
+---
+
+## 5. 新增 API 功能的标准流程
+
+以新增 `DMC Hydrogen` 为例：
+
+1. 后端实现：
+- 在 `core/` + `dmc/` 实现计算逻辑与 solver。
+
+2. application 用例：
+- 在 `src/pyqmc/application/` 新增/扩展用例函数，入参用 primitive types。
+
+3. API 模型：
+- 在 `models.py` 增加请求/响应模型与校验。
+
+4. API 路由：
+- 在 `api.py` 注册 endpoint。
+- 路由只做 schema 适配，调用 `application` 用例。
+
+5. GUI 与 CLI（如需）：
+- GUI 直算路径调用同一 `application` 用例。
+- CLI 子命令也调用同一 `application` 用例。
+
+6. 测试：
+- API 集成测试：200/422。
+- 用例单测与相关数值测试。
+
+---
+
+## 6. 常见错误与建议
+
+1. 错误：把业务编排写在 `api.py` 路由里。
+- 建议：下沉到 `application/`。
+
+2. 错误：API 和 GUI 分别维护默认值/映射规则。
+- 建议：统一复用 `core/vmc_input.py`。
+
+3. 错误：新增参数只改 API，没改 GUI direct 路径。
+- 建议：检查 `application` 用例签名 + GUI bridge + API model 三处同步。
+
+---
+
+## 7. 调试命令
 
 启动 API：
-
 ```bash
 pyqmc serve-api --host 127.0.0.1 --port 8000
 ```
 
-或：
-
-```bash
-pyqmc-api --host 127.0.0.1 --port 8000
-```
-
-开发热重载：
-
-```bash
-pyqmc serve-api --reload
-```
+查看 Swagger：
+- `http://127.0.0.1:8000/docs`
 
 运行测试：
-
 ```bash
 pytest
 ```
 
-仅跑 API 集成测试：
-
+只跑 API 集成测试：
 ```bash
 pytest tests/integration/test_api.py
 ```
-
----
-
-## 9. 代码风格建议（本项目语境）
-
-- 路由函数保持薄，业务逻辑放 `service.py`。
-- Request/Response 模型要完整、明确，避免返回“无结构 dict”。
-- 新功能优先“加法式扩展”，减少对现有 GUI/客户端的破坏。
-- 错误消息面向使用者，尽量具体（例如参数约束失败原因）。
-
----
-
-## 10. 常见问题（FAQ）
-
-## Q1：为什么不在 `api.py` 里直接拼配置并调用 solver？
-
-A：可以，但会让路由层过重，后续维护困难。`service.py` 的存在让路由更稳定，也便于复用与测试。
-
-## Q2：什么时候需要改 CORS？
-
-A：当 GUI 或外部前端部署到特定域名时，建议把 `allow_origins=["*"]` 收紧为白名单。
-
-## Q3：新增功能时，最容易漏掉哪一步？
-
-A：最常见是“后端改了但模型没改”或“API 改了但 app.js 还在发旧字段”。建议每次按第 5 节步骤逐项执行。

@@ -8,6 +8,7 @@
 ## Package Layout
 - `src/pyqmc/core`: shared backend utilities (config, stats, result models)
   - includes shared transport-agnostic input mapping (`core/vmc_input.py`)
+- `src/pyqmc/application`: transport-agnostic use-case orchestration layer
 - `src/pyqmc/vmc`: VMC method modules (model, sampler, solver)
 - `src/pyqmc/dmc`: placeholder for future DMC implementation
 - `src/pyqmc/benchmarks`: benchmark suite and reference formulas
@@ -40,6 +41,10 @@ pyQMC/
 │       │   ├── stats.py
 │       │   ├── results.py
 │       │   └── vmc_input.py
+│       ├── application/
+│       │   ├── __init__.py
+│       │   ├── catalog.py
+│       │   └── vmc.py
 │       ├── vmc/
 │       │   ├── __init__.py
 │       │   ├── harmonic_oscillator.py
@@ -57,7 +62,6 @@ pyQMC/
 │       │   ├── api.py
 │       │   ├── api_server.py
 │       │   ├── models.py
-│       │   ├── service.py
 │       │   └── API_DEVELOPER_GUIDE_ZH.md
 │       └── gui/
 │           ├── __init__.py
@@ -67,7 +71,8 @@ pyQMC/
 │           └── assets/
 │               ├── index.html
 │               ├── app.js
-│               └── styles.css
+│               ├── styles.css
+│               └── ho_primer.svg
 └── tests/
     ├── conftest.py
     ├── unit/
@@ -75,6 +80,8 @@ pyQMC/
     │   ├── test_core_stats.py
     │   ├── test_core_results.py
     │   ├── test_core_vmc_input.py
+    │   ├── test_application_vmc.py
+    │   ├── test_application_catalog.py
     │   ├── test_vmc_harmonic_oscillator.py
     │   ├── test_vmc_metropolis.py
     │   ├── test_vmc_solver.py
@@ -90,8 +97,11 @@ pyQMC/
 - Backend-first core:
   - Numerical logic lives in `core`, `vmc`, `dmc`.
   - Physics code does not import GUI/web framework code.
+- Use-case/application layer:
+  - `application` coordinates backend flows for all transports.
+  - Avoids duplicating orchestration logic in API/GUI/CLI adapters.
 - Transport separation:
-  - `api` is an adapter layer (HTTP, schemas, route wiring).
+  - `api` is an adapter layer (HTTP, schemas, route wiring), not business logic.
   - `gui` is a presentation/orchestration layer (pywebview window + JS bridge).
 - Shared mapping to prevent drift:
   - `core/vmc_input.py` centralizes payload defaults and mapping to
@@ -120,9 +130,12 @@ pyQMC/
   - no FastAPI imports
   - no pywebview imports
   - pure simulation and numerical logic
+- `application`:
+  - transport-agnostic orchestration/use-cases
+  - shared entry points for API, GUI direct mode, and CLI
 - `api`:
   - pydantic request/response models
-  - endpoint handlers that call backend services
+  - endpoint handlers that call `application` use-cases
 - `gui`:
   - desktop window lifecycle
   - local direct-compute bridge (`pywebview` JS -> Python)
@@ -192,11 +205,12 @@ pytest
 To add a new physical system or method:
 1. Add model/wavefunction/sampler logic under `src/pyqmc/<method>` or `src/pyqmc/core`.
 2. Add a solver function returning `SimulationResult`.
-3. Add CLI command wiring in `src/pyqmc/cli.py`.
-4. Add API request/response models and route handlers in `src/pyqmc/api`.
-5. Add benchmark references and cases in `src/pyqmc/benchmarks`.
-6. Add unit + integration tests.
-7. Update user/developer manuals.
+3. Add or extend a transport-agnostic use-case in `src/pyqmc/application`.
+4. Add CLI command wiring in `src/pyqmc/cli.py` (calling `application`).
+5. Add API request/response models and route handlers in `src/pyqmc/api` (calling `application`).
+6. Add benchmark references and cases in `src/pyqmc/benchmarks` if relevant.
+7. Add unit + integration tests.
+8. Update user/developer manuals.
 
 ## Coding Conventions
 - Prefer explicit types and small focused functions.

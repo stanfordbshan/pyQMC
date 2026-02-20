@@ -6,11 +6,10 @@ import argparse
 import json
 import sys
 
-from pyqmc.benchmarks.vmc_harmonic_oscillator import (
-    run_vmc_harmonic_oscillator_benchmarks,
+from pyqmc.application.vmc import (
+    run_vmc_harmonic_oscillator_benchmark_use_case,
+    run_vmc_harmonic_oscillator_use_case,
 )
-from pyqmc.core.config import SimulationConfig
-from pyqmc.vmc.solver import run_vmc_harmonic_oscillator
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -99,7 +98,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def _run_vmc_ho(args: argparse.Namespace) -> int:
-    config = SimulationConfig(
+    result = run_vmc_harmonic_oscillator_use_case(
         n_steps=args.n_steps,
         burn_in=args.burn_in,
         step_size=args.step_size,
@@ -107,8 +106,6 @@ def _run_vmc_ho(args: argparse.Namespace) -> int:
         initial_position=args.initial_position,
         seed=args.seed,
     )
-
-    result = run_vmc_harmonic_oscillator(config)
     if args.json:
         print(json.dumps(result.to_dict(), indent=2))
     else:
@@ -153,7 +150,7 @@ def _run_gui(args: argparse.Namespace) -> int:
 
 
 def _run_benchmark(args: argparse.Namespace) -> int:
-    suite = run_vmc_harmonic_oscillator_benchmarks(
+    suite = run_vmc_harmonic_oscillator_benchmark_use_case(
         n_steps=args.n_steps,
         burn_in=args.burn_in,
         step_size=args.step_size,

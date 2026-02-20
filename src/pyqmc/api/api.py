@@ -6,6 +6,11 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from pyqmc import __version__
+from pyqmc.application.catalog import get_available_methods, get_available_systems
+from pyqmc.application.vmc import (
+    run_vmc_harmonic_oscillator_benchmark_use_case,
+    run_vmc_harmonic_oscillator_use_case,
+)
 
 from .models import (
     BenchmarkSuiteResponse,
@@ -14,12 +19,6 @@ from .models import (
     SystemInfo,
     VmcHarmonicOscillatorBenchmarkRequest,
     VmcHarmonicOscillatorRequest,
-)
-from .service import (
-    list_methods,
-    list_systems,
-    run_vmc_harmonic_oscillator,
-    run_vmc_harmonic_oscillator_benchmark_suite,
 )
 
 
@@ -50,11 +49,11 @@ def create_app() -> FastAPI:
 
     @app.get("/methods", response_model=list[MethodInfo], tags=["catalog"])
     def methods() -> list[MethodInfo]:
-        return list_methods()
+        return [MethodInfo(**item) for item in get_available_methods()]
 
     @app.get("/systems", response_model=list[SystemInfo], tags=["catalog"])
     def systems() -> list[SystemInfo]:
-        return list_systems()
+        return [SystemInfo(**item) for item in get_available_systems()]
 
     @app.post(
         "/simulate/vmc/harmonic-oscillator",
@@ -64,7 +63,14 @@ def create_app() -> FastAPI:
     def simulate_vmc_harmonic_oscillator(
         payload: VmcHarmonicOscillatorRequest,
     ) -> SimulationResultResponse:
-        result = run_vmc_harmonic_oscillator(payload)
+        result = run_vmc_harmonic_oscillator_use_case(
+            n_steps=payload.n_steps,
+            burn_in=payload.burn_in,
+            step_size=payload.step_size,
+            alpha=payload.alpha,
+            initial_position=payload.initial_position,
+            seed=payload.seed,
+        )
         return SimulationResultResponse(**result.to_dict())
 
     @app.post(
@@ -75,7 +81,13 @@ def create_app() -> FastAPI:
     def benchmark_vmc_harmonic_oscillator(
         payload: VmcHarmonicOscillatorBenchmarkRequest,
     ) -> BenchmarkSuiteResponse:
-        suite = run_vmc_harmonic_oscillator_benchmark_suite(payload)
+        suite = run_vmc_harmonic_oscillator_benchmark_use_case(
+            n_steps=payload.n_steps,
+            burn_in=payload.burn_in,
+            step_size=payload.step_size,
+            initial_position=payload.initial_position,
+            seed=payload.seed,
+        )
         return BenchmarkSuiteResponse(**suite.to_dict())
 
     return app

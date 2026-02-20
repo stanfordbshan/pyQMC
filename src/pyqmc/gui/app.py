@@ -12,8 +12,8 @@ from typing import Any, Literal
 from urllib.parse import urlencode
 from urllib.request import urlopen
 
+from pyqmc.application.vmc import run_vmc_harmonic_oscillator_use_case
 from pyqmc.core.vmc_input import build_vmc_harmonic_oscillator_config_from_mapping
-from pyqmc.vmc.solver import run_vmc_harmonic_oscillator
 
 ComputeMode = Literal["auto", "direct", "api"]
 COMPUTE_MODE_CHOICES: tuple[ComputeMode, ...] = ("auto", "direct", "api")
@@ -34,7 +34,14 @@ class LocalComputeBridge:
         """Run VMC locally without HTTP and return JSON-serializable result."""
         # Reuse shared payload->config mapping so GUI and API stay in sync.
         config = build_vmc_harmonic_oscillator_config_from_mapping(payload)
-        result = run_vmc_harmonic_oscillator(config)
+        result = run_vmc_harmonic_oscillator_use_case(
+            n_steps=config.n_steps,
+            burn_in=config.burn_in,
+            step_size=config.step_size,
+            alpha=config.alpha,
+            initial_position=config.initial_position,
+            seed=config.seed,
+        )
         return result.to_dict()
 
 
