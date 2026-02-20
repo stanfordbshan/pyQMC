@@ -17,6 +17,8 @@
 ## Documentation Index
 - API 中文开发详解：
   - `src/pyqmc/api/API_DEVELOPER_GUIDE_ZH.md`
+- GUI 中文联动说明：
+  - `src/pyqmc/gui/GUI_DEVELOPER_NOTE_ZH.md`
 - 基准参考说明：
   - `docs/benchmark_references.md`
 
