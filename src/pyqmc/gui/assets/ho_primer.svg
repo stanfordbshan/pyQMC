@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 300" role="img" aria-labelledby="title desc">
+  <title id="title">Harmonic oscillator VMC primer</title>
+  <desc id="desc">Parabolic potential, Gaussian trial wavefunction and sample points.</desc>
+
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#fffaf0" />
+      <stop offset="100%" stop-color="#f3fff9" />
+    </linearGradient>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#4d5e68" />
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="680" height="300" rx="16" fill="url(#bg)" />
+
+  <g transform="translate(58,34)">
+    <line x1="0" y1="214" x2="562" y2="214" stroke="#4d5e68" stroke-width="2" marker-end="url(#arrow)" />
+    <line x1="280" y1="228" x2="280" y2="10" stroke="#4d5e68" stroke-width="2" marker-end="url(#arrow)" />
+
+    <text x="568" y="220" font-size="16" fill="#2a3642">x</text>
+    <text x="286" y="16" font-size="16" fill="#2a3642">Energy</text>
+
+    <!-- Harmonic potential V(x)=x^2/2 (scaled) -->
+    <path
+      d="M 70 202
+         C 150 166, 220 108, 280 34
+         C 340 108, 410 166, 490 202"
+      fill="none"
+      stroke="#d6682e"
+      stroke-width="4"
+      stroke-linecap="round"
+    />
+
+    <!-- Gaussian trial wavefunction profile (scaled for illustration) -->
+    <path
+      d="M 120 204
+         C 180 195, 230 135, 280 62
+         C 330 135, 380 195, 440 204"
+      fill="none"
+      stroke="#0e6b5f"
+      stroke-width="4"
+      stroke-linecap="round"
+      stroke-dasharray="10 8"
+    />
+
+    <!-- Sample points -->
+    <g fill="#1f6fd3" opacity="0.9">
+      <circle cx="192" cy="151" r="5" />
+      <circle cx="230" cy="128" r="5" />
+      <circle cx="257" cy="88" r="5" />
+      <circle cx="280" cy="78" r="5" />
+      <circle cx="304" cy="95" r="5" />
+      <circle cx="333" cy="128" r="5" />
+      <circle cx="365" cy="154" r="5" />
+    </g>
+
+    <rect x="354" y="22" width="188" height="82" rx="10" fill="#ffffff" stroke="#d8ccb6" />
+    <line x1="372" y1="45" x2="406" y2="45" stroke="#d6682e" stroke-width="4" />
+    <text x="414" y="50" font-size="14" fill="#23303a">Potential V(x)</text>
+    <line x1="372" y1="67" x2="406" y2="67" stroke="#0e6b5f" stroke-width="4" stroke-dasharray="8 6" />
+    <text x="414" y="72" font-size="14" fill="#23303a">Trial psi(x; alpha)</text>
+    <circle cx="388" cy="88" r="5" fill="#1f6fd3" />
+    <text x="414" y="93" font-size="14" fill="#23303a">MC samples</text>
+  </g>
+</svg>

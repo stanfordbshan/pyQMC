@@ -45,6 +45,9 @@
   function renderResult(data) {
     const exact = data.metadata && data.metadata.exact_ground_state_energy;
     const delta = exact !== undefined ? data.mean_energy - exact : null;
+    const alpha = data.parameters && typeof data.parameters.alpha === "number"
+      ? data.parameters.alpha
+      : null;
 
     const lines = [
       `Method: ${data.method}`,
@@ -61,6 +64,21 @@
 
     if (delta !== null) {
       lines.push(`Difference (estimate - exact): ${fmt(delta, 8)}`);
+    }
+
+    if (
+      alpha !== null &&
+      Math.abs(alpha - 1.0) < 1e-12 &&
+      Math.abs(data.standard_error) < 1e-12 &&
+      delta !== null &&
+      Math.abs(delta) < 1e-12
+    ) {
+      lines.push(
+        "Note: alpha=1.0 is exact for this system, so local energy is constant E=0.5."
+      );
+      lines.push(
+        "Try alpha=0.95 or 0.90 to observe sampling fluctuations with small N."
+      );
     }
 
     resultEl.textContent = lines.join("\n");

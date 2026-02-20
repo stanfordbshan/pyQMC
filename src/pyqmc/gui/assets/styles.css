@@ -60,19 +60,61 @@ body {
   font-size: 1.15rem;
 }
 
+.primer {
+  display: grid;
+  grid-template-columns: minmax(320px, 1.1fr) minmax(320px, 1fr);
+  gap: 16px;
+  align-items: center;
+}
+
+.primer-media img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #fff;
+}
+
+.primer-text h2 {
+  margin-bottom: 10px;
+}
+
+.primer-text p {
+  margin: 0 0 10px;
+  color: var(--muted);
+}
+
+.primer-text ul {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px 14px;
+  align-items: end;
+}
+
+.grid > label {
+  min-width: 0;
 }
 
 label {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 5px;
   font-size: 0.95rem;
 }
 
 input {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 8px 10px;
@@ -128,5 +170,9 @@ button:hover {
 
   .hero h1 {
     font-size: 1.55rem;
+  }
+
+  .primer {
+    grid-template-columns: 1fr;
   }
 }
