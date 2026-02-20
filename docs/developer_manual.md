@@ -14,6 +14,12 @@
 - `src/pyqmc/gui`: pywebview host and UI bootstrap
 - `src/pyqmc/gui/assets`: static frontend assets (HTML/CSS/JS)
 
+## Documentation Index
+- API 中文开发详解：
+  - `src/pyqmc/api/API_DEVELOPER_GUIDE_ZH.md`
+- 基准参考说明：
+  - `docs/benchmark_references.md`
+
 ## Layer Responsibilities
 - `core` / `vmc` / `dmc`:
   - no FastAPI imports
